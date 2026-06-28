@@ -4,7 +4,7 @@ from pathlib import Path
 from pypdf import PdfReader
 
 
-SUPPORTED_EXTENSIONS = {".txt", ".pdf"}
+SUPPORTED_EXTENSIONS = {".txt", ".md", ".pdf"}
 
 
 @dataclass
@@ -13,7 +13,7 @@ class LoadedDocument:
     text: str
 
 
-def load_txt_file(path: Path) -> str:
+def load_text_file(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig")
 
 
@@ -32,8 +32,8 @@ def load_pdf_file(path: Path) -> str:
 def load_document(path: Path) -> LoadedDocument:
     suffix = path.suffix.lower()
 
-    if suffix == ".txt":
-        text = load_txt_file(path)
+    if suffix in {".txt", ".md"}:
+        text = load_text_file(path)
     elif suffix == ".pdf":
         text = load_pdf_file(path)
     else:
