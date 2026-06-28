@@ -1,0 +1,7 @@
+﻿This is a sample document for testing the local RAG system.
+
+Milestone 1 focuses on a local MVP.
+
+The system should load local documents, split them into chunks, create embeddings, store them in a local vector database, and answer questions based on retrieved source text.
+
+The first version should avoid cloud deployment, user accounts, payment systems, and complex user interfaces.
