@@ -1,11 +1,13 @@
 ﻿from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 import faiss
 import numpy as np
 
-from src.metadata import TextChunk
+from src.metadata import ChunkMetadata, TextChunk
 
 
 @dataclass(frozen=True)
@@ -72,3 +74,53 @@ class FaissVectorStore:
             )
 
         return results
+
+    def save(self, directory: Path) -> None:
+        directory.mkdir(parents=True, exist_ok=True)
+
+        index_path = directory / "index.faiss"
+        chunks_path = directory / "chunks.json"
+
+        faiss.write_index(self.index, str(index_path))
+
+        chunk_data = [chunk.to_dict() for chunk in self.chunks]
+        chunks_path.write_text(
+            json.dumps(chunk_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    @classmethod
+    def load(cls, directory: Path) -> "FaissVectorStore":
+        index_path = directory / "index.faiss"
+        chunks_path = directory / "chunks.json"
+
+        if not index_path.exists():
+            raise FileNotFoundError(f"Missing FAISS index file: {index_path}")
+
+        if not chunks_path.exists():
+            raise FileNotFoundError(f"Missing chunks metadata file: {chunks_path}")
+
+        index = faiss.read_index(str(index_path))
+        raw_chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
+
+        store = cls(embedding_dimension=index.d)
+        store.index = index
+        store.chunks = [
+            TextChunk(
+                metadata=ChunkMetadata(
+                    chunk_id=item["chunk_id"],
+                    source=item["source"],
+                    source_path=item["source_path"],
+                    page=item["page"],
+                    chunk_index=item["chunk_index"],
+                    total_chunks_for_document=item["total_chunks_for_document"],
+                ),
+                text=item["text"],
+            )
+            for item in raw_chunks
+        ]
+
+        if store.index.ntotal != len(store.chunks):
+            raise ValueError("FAISS index size does not match chunks metadata size.")
+
+        return store
