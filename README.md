@@ -52,3 +52,23 @@ Use .env.example as a template for required environment variables.
 ## Current Development Focus
 
 The current focus is building a minimal local RAG pipeline before adding product features or cloud infrastructure.
+
+## Index local documents
+
+Place supported `.txt`, `.md`, or `.pdf` files in `data/sample_documents`.
+
+Build or rebuild the local index:
+
+```powershell
+python -m src.index_documents
+```
+
+Query the saved local index:
+
+```powershell
+python -m src.rag_cli
+```
+
+Generated FAISS files are stored in `data/vector_store` and are ignored by Git.
+
+Document indexing uses local embeddings and does not call Gemini, OpenAI, or another remote LLM provider.

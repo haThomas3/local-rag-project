@@ -269,28 +269,34 @@ Done means:
 
 ## Milestone 8 — Document Indexing Workflow
 
-Status: Planned
+Status: Complete, basic version
 
 Goal: Create a cleaner workflow for adding and indexing documents.
 
-Planned work:
+Completed baseline:
 
-- Add a command for indexing documents.
-- Support adding new local files.
-- Rebuild or update the local vector store.
+- Added `python -m src.index_documents`.
+- Loads `.txt`, `.md`, and `.pdf` files from `data/sample_documents`.
+- Splits documents into chunks.
+- Creates embeddings using the local embedding model.
+- Rebuilds and saves the FAISS vector store in `data/vector_store`.
+- CLI loads the saved index instead of rebuilding it on every run.
+- Verified retrieval from a newly indexed document.
+- Does not call Gemini, OpenAI, or another remote LLM API.
+
+Future improvements:
+
 - Track which files were indexed.
-- Improve PDF handling.
-- Improve metadata for source references.
-- Add better page or document location information where possible.
-
-This is the milestone where PDF processing becomes a more serious part of the system.
+- Support incremental updates instead of full rebuilds.
+- Improve PDF page-level handling.
+- Improve source metadata and document location information.
 
 Done means:
 
 - The user can add documents into the project.
 - The system can index those documents.
 - The vector store is updated.
-- The system can answer questions from the newly indexed files.
+- The CLI can retrieve information from the indexed files.
 
 ---
 
