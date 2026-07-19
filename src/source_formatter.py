@@ -15,29 +15,43 @@ def _shorten_quote(text: str, max_length: int = MAX_QUOTE_LENGTH) -> str:
     return cleaned[: max_length - 3].rstrip() + "..."
 
 
+def score_to_relevance_label(score: float) -> str:
+    if score >= 0.55:
+        return "VERY HIGH"
+
+    if score >= 0.35:
+        return "HIGH"
+
+    if score >= 0.20:
+        return "MEDIUM"
+
+    if score >= 0.10:
+        return "LOW"
+
+    return "VERY LOW"
+
+
 def format_user_friendly_source(result: SearchResult) -> str:
     chunk = result.chunk
     metadata = chunk.metadata
 
-    location_parts: list[str] = []
-
     if metadata.page is not None:
-        location_parts.append(f"page {metadata.page}")
+        location = f"page {metadata.page}"
     else:
-        location_parts.append(
-            f"document excerpt {metadata.chunk_index} of {metadata.total_chunks_for_document}"
+        location = (
+            f"document excerpt {metadata.chunk_index} "
+            f"of {metadata.total_chunks_for_document}"
         )
 
-    location = ", ".join(location_parts)
     quote = _shorten_quote(chunk.text)
+    relevance = score_to_relevance_label(result.score)
 
     return "\n".join(
         [
             f"Source file: {metadata.source}",
             f"Location: {location}",
+            f"Relevance: {relevance}",
             f'Relevant quote: "{quote}"',
-            f"Similarity score: {result.score:.4f}",
-            f"Technical reference: {metadata.chunk_id}",
         ]
     )
 
