@@ -48,3 +48,10 @@ def build_retriever_from_dir(
     retriever.index_chunks(chunks)
 
     return retriever, chunks
+
+def build_retriever_from_store(
+    vector_store_dir: Path,
+) -> tuple[LocalRetriever, list[TextChunk]]:
+    retriever = LocalRetriever()
+    retriever.vector_store = FaissVectorStore.load(vector_store_dir)
+    return retriever, retriever.vector_store.chunks

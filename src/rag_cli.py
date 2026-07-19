@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from src.config import SAMPLE_DOCUMENTS_DIR
+from src.config import VECTOR_STORE_DIR
 from src.llm_provider import generate_answer_from_prompt, normalize_provider
 from src.prompt_builder import (
     build_debug_report,
@@ -10,7 +10,7 @@ from src.prompt_builder import (
     build_user_report,
     filter_reliable_results,
 )
-from src.retriever import LocalRetriever, build_retriever_from_dir
+from src.retriever import LocalRetriever, build_retriever_from_store
 
 
 EXIT_COMMANDS = {"exit", "quit", ":exit", ":quit"}
@@ -191,7 +191,7 @@ def main() -> None:
     llm_provider = normalize_provider(args.llm_provider)
 
     print("Loading local RAG system...")
-    retriever, chunks = build_retriever_from_dir(SAMPLE_DOCUMENTS_DIR)
+    retriever, chunks = build_retriever_from_store(VECTOR_STORE_DIR)
     print(f"Local RAG is ready. Indexed chunks: {len(chunks)}")
     print(f"LLM provider for this run: {llm_provider}")
     print(f"Remote LLM calls explicitly allowed: {args.allow_remote_llm}")
@@ -216,6 +216,7 @@ def main() -> None:
         show_prompt=args.show_prompt,
         generate_answer=args.generate_answer,
         llm_provider=llm_provider,
+        allow_remote_llm=args.allow_remote_llm,
     )
 
 

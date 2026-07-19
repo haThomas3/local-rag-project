@@ -4,6 +4,16 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+
+def _faiss_path(path: Path) -> str:
+    resolved_path = path.resolve()
+    resolved_cwd = Path.cwd().resolve()
+
+    try:
+        return str(resolved_path.relative_to(resolved_cwd))
+    except ValueError:
+        return str(resolved_path)
+
 import faiss
 import numpy as np
 
@@ -81,7 +91,7 @@ class FaissVectorStore:
         index_path = directory / "index.faiss"
         chunks_path = directory / "chunks.json"
 
-        faiss.write_index(self.index, str(index_path))
+        faiss.write_index(self.index, _faiss_path(index_path))
 
         chunk_data = [chunk.to_dict() for chunk in self.chunks]
         chunks_path.write_text(
@@ -100,7 +110,7 @@ class FaissVectorStore:
         if not chunks_path.exists():
             raise FileNotFoundError(f"Missing chunks metadata file: {chunks_path}")
 
-        index = faiss.read_index(str(index_path))
+        index = faiss.read_index(_faiss_path(index_path))
         raw_chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
 
         store = cls(embedding_dimension=index.d)
