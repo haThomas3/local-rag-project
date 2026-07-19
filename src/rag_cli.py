@@ -28,7 +28,7 @@ def print_help() -> None:
     print()
 
 
-def print_llm_result(question: str, results, llm_provider: str) -> None:
+def print_llm_result(question: str, results, llm_provider: str, allow_remote_llm: bool) -> None:
     reliable_results = filter_reliable_results(results)
 
     print()
@@ -44,6 +44,7 @@ def print_llm_result(question: str, results, llm_provider: str) -> None:
     generation_result = generate_answer_from_prompt(
         prompt=rag_prompt,
         provider=llm_provider,
+        allow_remote_api_calls=allow_remote_llm,
     )
 
     print(f"Provider: {generation_result.provider}")
@@ -61,6 +62,7 @@ def print_question_result(
     show_prompt: bool,
     generate_answer: bool,
     llm_provider: str,
+    allow_remote_llm: bool,
 ) -> None:
     results = retriever.retrieve(question, top_k=top_k)
 
@@ -72,6 +74,7 @@ def print_question_result(
             question=question,
             results=results,
             llm_provider=llm_provider,
+            allow_remote_llm=allow_remote_llm,
         )
 
     if debug:
@@ -92,6 +95,7 @@ def run_interactive_loop(
     show_prompt: bool,
     generate_answer: bool,
     llm_provider: str,
+    allow_remote_llm: bool,
 ) -> None:
     print("Type a question, ':help', ':debug', ':prompt', ':answer', or 'exit'.")
     print()
@@ -139,6 +143,7 @@ def run_interactive_loop(
             show_prompt=prompt_enabled,
             generate_answer=answer_enabled,
             llm_provider=llm_provider,
+            allow_remote_llm=allow_remote_llm,
         )
         print()
 
@@ -176,6 +181,11 @@ def main() -> None:
         default=None,
         help="Override LLM provider for this run: none, local, gemini, or openai.",
     )
+    parser.add_argument(
+        "--allow-remote-llm",
+        action="store_true",
+        help="Allow a remote LLM provider for this run only.",
+    )
 
     args = parser.parse_args()
     llm_provider = normalize_provider(args.llm_provider)
@@ -184,6 +194,7 @@ def main() -> None:
     retriever, chunks = build_retriever_from_dir(SAMPLE_DOCUMENTS_DIR)
     print(f"Local RAG is ready. Indexed chunks: {len(chunks)}")
     print(f"LLM provider for this run: {llm_provider}")
+    print(f"Remote LLM calls explicitly allowed: {args.allow_remote_llm}")
 
     if args.question:
         print_question_result(
@@ -194,6 +205,7 @@ def main() -> None:
             show_prompt=args.show_prompt,
             generate_answer=args.generate_answer,
             llm_provider=llm_provider,
+            allow_remote_llm=args.allow_remote_llm,
         )
         return
 

@@ -37,11 +37,17 @@ def normalize_provider(provider: str | None = None) -> str:
 def generate_answer_from_prompt(
     prompt: str,
     provider: str | None = None,
+    allow_remote_api_calls: bool | None = None,
 ) -> LLMGenerationResult:
     if not prompt.strip():
         raise ValueError("prompt cannot be empty.")
 
     selected_provider = normalize_provider(provider)
+    remote_api_calls_allowed = (
+        ALLOW_PAID_API_CALLS
+        if allow_remote_api_calls is None
+        else allow_remote_api_calls
+    )
 
     if selected_provider == "none":
         return LLMGenerationResult(
@@ -74,7 +80,7 @@ def generate_answer_from_prompt(
                 used_remote_api=False,
             )
 
-        if not ALLOW_PAID_API_CALLS:
+        if not remote_api_calls_allowed:
             return LLMGenerationResult(
                 provider=selected_provider,
                 answer=(
@@ -101,7 +107,7 @@ def generate_answer_from_prompt(
                 used_remote_api=False,
             )
 
-        if not ALLOW_PAID_API_CALLS:
+        if not remote_api_calls_allowed:
             return LLMGenerationResult(
                 provider=selected_provider,
                 answer=(
