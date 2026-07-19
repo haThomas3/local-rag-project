@@ -1,0 +1,94 @@
+[
+  {
+    "id": "hp_001",
+    "question": "Who is Harry Potter?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [
+      "orphaned boy",
+      "wizard"
+    ],
+    "case_type": "answerable"
+  },
+  {
+    "id": "hp_002",
+    "question": "Where did Harry live before discovering that he was a wizard?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [
+      "Dursley",
+      "4 Privet Drive"
+    ],
+    "case_type": "answerable"
+  },
+  {
+    "id": "hp_003",
+    "question": "Who told Harry that he was a wizard?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [
+      "Rubeus Hagrid"
+    ],
+    "case_type": "answerable"
+  },
+  {
+    "id": "hp_004",
+    "question": "When did Harry learn that he was a wizard?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [
+      "eleventh birthday"
+    ],
+    "case_type": "answerable"
+  },
+  {
+    "id": "hp_005",
+    "question": "What is Hogwarts?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [
+      "school of witchcraft and wizardry"
+    ],
+    "case_type": "answerable"
+  },
+  {
+    "id": "hp_006",
+    "question": "What are the four Hogwarts houses?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [
+      "Gryffindor",
+      "Slytherin",
+      "Ravenclaw",
+      "Hufflepuff"
+    ],
+    "case_type": "answerable"
+  },
+  {
+    "id": "hp_007",
+    "question": "Who are Harry Potter's close friends?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [
+      "Ron Weasley",
+      "Hermione Granger"
+    ],
+    "case_type": "answerable"
+  },
+  {
+    "id": "hp_008",
+    "question": "Who is the headmaster of Hogwarts?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [
+      "Albus Dumbledore"
+    ],
+    "case_type": "answerable"
+  },
+  {
+    "id": "hp_009",
+    "question": "What is Harry Potter's favorite food?",
+    "expected_source": "harry_potter_basics.md",
+    "expected_terms": [],
+    "case_type": "unsupported_in_domain"
+  },
+  {
+    "id": "hp_010",
+    "question": "What is the capital of Japan?",
+    "expected_source": null,
+    "expected_terms": [],
+    "case_type": "out_of_scope"
+  }
+]
