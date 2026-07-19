@@ -21,7 +21,7 @@ Completed baseline milestones:
 
 Latest completed implementation checkpoint:
 
-- `db417f9 Add explicit remote LLM opt-in flag`
+- `6e60f7b Add behavioral RAG evaluation tests`
 
 ---
 
@@ -302,9 +302,23 @@ Done means:
 
 ## Milestone 9 — Evaluation Suite
 
-Status: Planned
+Status: Complete - local evaluation suite
 
 Goal: Add tests that verify whether the RAG system behaves correctly.
+
+Completed local evaluation coverage:
+
+- Core chunking behavior is tested.
+- Vector store save/load behavior is tested.
+- Supported RAG questions return relevant sources.
+- Low-relevance context returns insufficient-context behavior.
+- RAG prompts filter out unreliable retrieved context.
+- Provider none is verified to avoid remote API usage.
+
+Deferred to Milestone 7B:
+
+- Real Gemini/Ollama/OpenAI answer-generation tests.
+- LLM refusal tests using a real remote or local model.
 
 Planned work:
 
@@ -465,7 +479,6 @@ Done means:
 
 1. Milestone 8 — Document Indexing Workflow
 2. Milestone 7B — Real LLM Provider Implementation
-3. Milestone 9 — Evaluation Suite
 4. Milestone 10 — FastAPI Backend
 5. Milestone 11 — Basic User Interface
 6. Milestone 12 — File Upload UI
