@@ -21,7 +21,7 @@ Completed baseline milestones:
 
 Latest completed implementation checkpoint:
 
-- `d865629 Add interactive local RAG CLI`
+- `db417f9 Add explicit remote LLM opt-in flag`
 
 ---
 
@@ -218,9 +218,33 @@ Done means:
 
 ## Milestone 7 — LLM Provider Integration
 
-Status: Next
+Status: In progress - safe provider scaffold complete; real provider implementation postponed
 
 Goal: Connect the RAG prompt to an actual LLM provider.
+
+Current checkpoint:
+
+- 7A — Complete:
+  - Cost-safe LLM provider scaffold exists.
+  - Default provider is none.
+  - Remote LLM calls are blocked by default.
+  - CLI supports explicit per-run provider override.
+  - CLI supports explicit remote opt-in using --allow-remote-llm.
+  - Gemini/OpenAI/Ollama are not default dependencies for normal use.
+
+- 7B — Still open:
+  - Implement real Gemini provider for controlled development testing.
+  - Later implement local provider through Ollama or LM Studio.
+  - Keep OpenAI as an optional paid fallback only.
+  - Verify that generated answers use only retrieved sources.
+  - Test refusal behavior when the answer is not present in retrieved context.
+
+Reason for postponing 7B:
+
+- The local indexing workflow should be stabilized first.
+- The project should not become dependent on Gemini before the local RAG pipeline is reliable.
+- Gemini will be used later as a development helper, not as the project default.
+
 
 Planned work:
 
@@ -433,8 +457,8 @@ Done means:
 
 ## Recommended Development Order From Here
 
-1. Milestone 7 — LLM Provider Integration
-2. Milestone 8 — Document Indexing Workflow
+1. Milestone 8 — Document Indexing Workflow
+2. Milestone 7B — Real LLM Provider Implementation
 3. Milestone 9 — Evaluation Suite
 4. Milestone 10 — FastAPI Backend
 5. Milestone 11 — Basic User Interface
