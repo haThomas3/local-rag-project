@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
 SAMPLE_DOCUMENTS_DIR = DATA_DIR / "sample_documents"
-VECTOR_DB_DIR = PROJECT_ROOT / "vector_db"
+VECTOR_STORE_DIR = DATA_DIR / "vector_store"
 
 load_dotenv(PROJECT_ROOT / ".env")
 
@@ -57,7 +57,7 @@ GEMINI_API_KEY_SET = _has_real_value(os.getenv("GEMINI_API_KEY"))
 def print_config_summary() -> None:
     print("Project root:", PROJECT_ROOT)
     print("Sample documents dir:", SAMPLE_DOCUMENTS_DIR)
-    print("Vector DB dir:", VECTOR_DB_DIR)
+    print("Vector store dir:", VECTOR_STORE_DIR)
     print("LLM provider:", LLM_PROVIDER)
     print("Embedding provider:", EMBEDDING_PROVIDER)
     print("Paid API calls allowed:", ALLOW_PAID_API_CALLS)
