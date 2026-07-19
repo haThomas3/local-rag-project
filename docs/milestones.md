@@ -1,4 +1,4 @@
-﻿# Local RAG Project Milestones
+# Local RAG Project Milestones
 
 This document tracks the planned development path for the local RAG project.
 
@@ -17,10 +17,11 @@ Completed baseline milestones:
 - Milestone 3 — Local Document Ingestion
 - Milestone 4 — Local Embeddings and Vector Store
 - Milestone 5 — RAG Prompt Builder
+- Milestone 6 — Local RAG Runtime / Interactive CLI
 
 Latest completed implementation checkpoint:
 
-- `87dcb19 Add retrieval relevance gate`
+- `d865629 Add interactive local RAG CLI`
 
 ---
 
@@ -185,7 +186,7 @@ Done means:
 
 ## Milestone 6 — Local RAG Runtime / Interactive CLI
 
-Status: Next
+Status: Complete
 
 Goal: Keep the RAG system running instead of restarting Python and reloading the model for every question.
 
@@ -203,6 +204,10 @@ Why this matters:
 - Current scripts are slow because each command starts Python again and reloads the embedding model.
 - A persistent runtime will make the local system feel much faster.
 
+Important commits:
+
+- `d865629 Add interactive local RAG CLI`
+
 Done means:
 
 - The user can start the RAG system once.
@@ -213,7 +218,7 @@ Done means:
 
 ## Milestone 7 — LLM Provider Integration
 
-Status: Planned
+Status: Next
 
 Goal: Connect the RAG prompt to an actual LLM provider.
 
@@ -428,16 +433,15 @@ Done means:
 
 ## Recommended Development Order From Here
 
-1. Milestone 6 — Local RAG Runtime / Interactive CLI
-2. Milestone 7 — LLM Provider Integration
-3. Milestone 8 — Document Indexing Workflow
-4. Milestone 9 — Evaluation Suite
-5. Milestone 10 — FastAPI Backend
-6. Milestone 11 — Basic User Interface
-7. Milestone 12 — File Upload UI
-8. Milestone 13 — Cost Control and Provider Safety
-9. Milestone 14 — Docker and Deployment Preparation
-10. Milestone 15 — Portfolio Polish
+1. Milestone 7 — LLM Provider Integration
+2. Milestone 8 — Document Indexing Workflow
+3. Milestone 9 — Evaluation Suite
+4. Milestone 10 — FastAPI Backend
+5. Milestone 11 — Basic User Interface
+6. Milestone 12 — File Upload UI
+7. Milestone 13 — Cost Control and Provider Safety
+8. Milestone 14 — Docker and Deployment Preparation
+9. Milestone 15 — Portfolio Polish
 
 ---
 
