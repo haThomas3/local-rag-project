@@ -8,6 +8,8 @@ INSUFFICIENT_CONTEXT_MESSAGE = (
     "The indexed documents do not contain enough information to answer this question."
 )
 
+MIN_RELEVANCE_SCORE = 0.20
+
 
 GROUNDING_RULES = f"""You are a local RAG assistant.
 
@@ -25,9 +27,16 @@ Rules:
 """
 
 
+def filter_reliable_results(
+    results: list[SearchResult],
+    min_score: float = MIN_RELEVANCE_SCORE,
+) -> list[SearchResult]:
+    return [result for result in results if result.score >= min_score]
+
+
 def format_context_for_prompt(results: list[SearchResult]) -> str:
     if not results:
-        return "No retrieved context was provided."
+        return "No sufficiently relevant retrieved context was provided."
 
     context_blocks: list[str] = []
 
@@ -64,12 +73,16 @@ def build_rag_prompt(question: str, results: list[SearchResult]) -> str:
     if not question.strip():
         raise ValueError("question cannot be empty.")
 
-    retrieved_context = format_context_for_prompt(results)
-    user_friendly_sources = format_user_friendly_sources(results)
+    reliable_results = filter_reliable_results(results)
+    retrieved_context = format_context_for_prompt(reliable_results)
+    user_friendly_sources = format_user_friendly_sources(reliable_results)
 
     return "\n\n".join(
         [
             GROUNDING_RULES.strip(),
+            "Retrieval gate:",
+            f"Minimum relevance score: {MIN_RELEVANCE_SCORE:.2f}",
+            f"Reliable retrieved source count: {len(reliable_results)}",
             "Retrieved context:",
             retrieved_context,
             "User-friendly source notes:",
@@ -90,6 +103,22 @@ def build_user_report(question: str, results: list[SearchResult]) -> str:
     if not question.strip():
         raise ValueError("question cannot be empty.")
 
+    reliable_results = filter_reliable_results(results)
+
+    if not reliable_results:
+        return "\n".join(
+            [
+                "USER REPORT",
+                "===========",
+                f"Question: {question.strip()}",
+                "",
+                INSUFFICIENT_CONTEXT_MESSAGE,
+                "",
+                "Retrieved user-friendly sources:",
+                "No sufficiently relevant sources were retrieved.",
+            ]
+        )
+
     return "\n".join(
         [
             "USER REPORT",
@@ -97,7 +126,7 @@ def build_user_report(question: str, results: list[SearchResult]) -> str:
             f"Question: {question.strip()}",
             "",
             "Retrieved user-friendly sources:",
-            format_user_friendly_sources(results),
+            format_user_friendly_sources(reliable_results),
             "",
             "Expected answer behavior:",
             "- Answer only if the retrieved sources contain enough information.",
@@ -110,25 +139,31 @@ def build_debug_report(question: str, results: list[SearchResult]) -> str:
     if not question.strip():
         raise ValueError("question cannot be empty.")
 
+    reliable_results = filter_reliable_results(results)
+
     lines: list[str] = [
         "BUG REPORT",
         "==========",
         f"Question: {question.strip()}",
-        f"Retrieved result count: {len(results)}",
+        f"Raw retrieved result count: {len(results)}",
+        f"Reliable result count: {len(reliable_results)}",
+        f"Minimum relevance score: {MIN_RELEVANCE_SCORE:.2f}",
         "",
     ]
 
     if not results:
-        lines.append("No retrieved results were returned.")
+        lines.append("No raw retrieved results were returned.")
         return "\n".join(lines)
 
     for index, result in enumerate(results, start=1):
         chunk = result.chunk
         metadata = chunk.metadata
+        passes_gate = result.score >= MIN_RELEVANCE_SCORE
 
         lines.extend(
             [
                 f"[Retrieved Result {index}]",
+                f"passes_retrieval_gate: {passes_gate}",
                 f"score: {result.score:.4f}",
                 f"source: {metadata.source}",
                 f"source_path: {metadata.source_path}",
