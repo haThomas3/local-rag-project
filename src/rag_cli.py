@@ -1,9 +1,15 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 
 from src.config import SAMPLE_DOCUMENTS_DIR
-from src.prompt_builder import build_debug_report, build_rag_prompt, build_user_report
+from src.llm_provider import generate_answer_from_prompt, normalize_provider
+from src.prompt_builder import (
+    build_debug_report,
+    build_rag_prompt,
+    build_user_report,
+    filter_reliable_results,
+)
 from src.retriever import LocalRetriever, build_retriever_from_dir
 
 
@@ -17,8 +23,34 @@ def print_help() -> None:
     print("  :help      Show this help message.")
     print("  :debug     Toggle debug report on or off.")
     print("  :prompt    Toggle raw RAG prompt display on or off.")
+    print("  :answer    Toggle LLM answer generation on or off.")
     print("  exit       Exit the CLI.")
     print()
+
+
+def print_llm_result(question: str, results, llm_provider: str) -> None:
+    reliable_results = filter_reliable_results(results)
+
+    print()
+    print("LLM ANSWER")
+    print("==========")
+
+    if not reliable_results:
+        print("Skipped: no sufficiently relevant sources passed the retrieval gate.")
+        print("Used remote API: False")
+        return
+
+    rag_prompt = build_rag_prompt(question, results)
+    generation_result = generate_answer_from_prompt(
+        prompt=rag_prompt,
+        provider=llm_provider,
+    )
+
+    print(f"Provider: {generation_result.provider}")
+    print(f"Status: {generation_result.status}")
+    print(f"Used remote API: {generation_result.used_remote_api}")
+    print()
+    print(generation_result.answer)
 
 
 def print_question_result(
@@ -27,11 +59,20 @@ def print_question_result(
     top_k: int,
     debug: bool,
     show_prompt: bool,
+    generate_answer: bool,
+    llm_provider: str,
 ) -> None:
     results = retriever.retrieve(question, top_k=top_k)
 
     print()
     print(build_user_report(question, results))
+
+    if generate_answer:
+        print_llm_result(
+            question=question,
+            results=results,
+            llm_provider=llm_provider,
+        )
 
     if debug:
         print()
@@ -49,12 +90,15 @@ def run_interactive_loop(
     top_k: int,
     debug: bool,
     show_prompt: bool,
+    generate_answer: bool,
+    llm_provider: str,
 ) -> None:
-    print("Type a question, ':help', ':debug', ':prompt', or 'exit'.")
+    print("Type a question, ':help', ':debug', ':prompt', ':answer', or 'exit'.")
     print()
 
     debug_enabled = debug
     prompt_enabled = show_prompt
+    answer_enabled = generate_answer
 
     while True:
         question = input("Question> ").strip()
@@ -82,12 +126,19 @@ def run_interactive_loop(
             print(f"Raw prompt display: {'on' if prompt_enabled else 'off'}")
             continue
 
+        if normalized_question == ":answer":
+            answer_enabled = not answer_enabled
+            print(f"LLM answer generation: {'on' if answer_enabled else 'off'}")
+            continue
+
         print_question_result(
             question=question,
             retriever=retriever,
             top_k=top_k,
             debug=debug_enabled,
             show_prompt=prompt_enabled,
+            generate_answer=answer_enabled,
+            llm_provider=llm_provider,
         )
         print()
 
@@ -115,12 +166,24 @@ def main() -> None:
         action="store_true",
         help="Show the raw RAG prompt.",
     )
+    parser.add_argument(
+        "--generate-answer",
+        action="store_true",
+        help="Generate a final answer using the configured LLM provider.",
+    )
+    parser.add_argument(
+        "--llm-provider",
+        default=None,
+        help="Override LLM provider for this run: none, local, gemini, or openai.",
+    )
 
     args = parser.parse_args()
+    llm_provider = normalize_provider(args.llm_provider)
 
     print("Loading local RAG system...")
     retriever, chunks = build_retriever_from_dir(SAMPLE_DOCUMENTS_DIR)
     print(f"Local RAG is ready. Indexed chunks: {len(chunks)}")
+    print(f"LLM provider for this run: {llm_provider}")
 
     if args.question:
         print_question_result(
@@ -129,6 +192,8 @@ def main() -> None:
             top_k=args.top_k,
             debug=args.debug,
             show_prompt=args.show_prompt,
+            generate_answer=args.generate_answer,
+            llm_provider=llm_provider,
         )
         return
 
@@ -137,6 +202,8 @@ def main() -> None:
         top_k=args.top_k,
         debug=args.debug,
         show_prompt=args.show_prompt,
+        generate_answer=args.generate_answer,
+        llm_provider=llm_provider,
     )
 
 
