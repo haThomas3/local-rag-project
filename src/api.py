@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from src.config import VECTOR_STORE_DIR
@@ -46,6 +48,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Local RAG API", lifespan=lifespan)
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+@app.get("/", response_class=HTMLResponse)
+def ui() -> str:
+    return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
 
 def get_retriever() -> LocalRetriever:

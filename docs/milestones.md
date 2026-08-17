@@ -406,23 +406,47 @@ Done means:
 
 ## Milestone 11 — Basic User Interface
 
-Status: Planned
+Status: Complete, basic version
 
 Goal: Build a user-facing interface for asking questions and reading sourced answers.
 
-Planned work:
+Completed work:
 
-- Add a simple frontend.
-- Add a question box.
-- Display the answer.
-- Display source file, location, relevance, and quote.
-- Hide technical debug information by default.
-- Add a developer/debug mode if useful.
+- Added `src/static/index.html`, a single self-contained page (inline CSS
+  and JS, no external requests, no build step) served by FastAPI at `/`.
+- Question box, Ask button, Enter-to-submit.
+- Displays sources: file, location, relevance label (color-coded), score,
+  quote.
+- "Generate answer" checkbox with provider select (none/gemini/local) and
+  an "allow remote LLM" checkbox, mirroring the CLI/API flags.
+- Insufficient-context and error states shown clearly instead of failing
+  silently.
+- Footer shows live index status via `/health`.
+- Added `src/desktop_app.py`: wraps the same page in a native window via
+  `pywebview` instead of a browser tab, so the app can be launched like a
+  normal desktop program (`python -m src.desktop_app`). Starts the FastAPI
+  server in a background thread, waits for `/health` to respond, then
+  opens the window. No Electron/Chromium bundling — reuses the OS's own
+  web renderer.
+- Verified live: loaded the page in Chrome, ran the full golden path
+  (relevant question, unrelated/insufficient-context question, generate
+  answer with `none` provider), confirmed correct sources/labels/citations
+  and no console errors. Verified the desktop wrapper starts the server,
+  waits for readiness, and creates a real OS-level window (confirmed via
+  window handle, title, and on-screen bounds).
+
+Not yet done:
+
+- Debug/raw-prompt toggles exist in the API but aren't exposed in the UI
+  yet (only `generate_answer`/`llm_provider`/`allow_remote_llm`).
+- No packaging/installer for the desktop app yet (still run via
+  `python -m src.desktop_app`, not a standalone .exe).
 
 Done means:
 
-- A normal user can ask questions without using PowerShell.
-- Answers and sources are displayed clearly.
+- A normal user can ask questions without using PowerShell. — Achieved,
+  via both the browser page and the desktop window.
+- Answers and sources are displayed clearly. — Achieved.
 
 ---
 
@@ -525,7 +549,8 @@ Done means:
 2. ~~Milestone 7B — Real LLM Provider Implementation~~ Done for
    Gemini and Ollama; OpenAI still a stub, not currently prioritized.
 3. ~~Milestone 10 — FastAPI Backend~~ Done, basic version.
-4. Milestone 11 — Basic User Interface
+4. ~~Milestone 11 — Basic User Interface~~ Done, basic version (web
+   page + desktop window wrapper).
 5. Milestone 12 — File Upload UI
 6. Milestone 13 — Cost Control and Provider Safety
 7. Milestone 14 — Docker and Deployment Preparation

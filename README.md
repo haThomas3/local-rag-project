@@ -116,3 +116,17 @@ python -m uvicorn src.api:app --port 8000
 The server loads the vector store once at startup, same as the CLI. If no
 index exists yet, it still starts, and `/ask`/`/documents` return `503`
 until you run `python -m src.index_documents`.
+
+Open `http://127.0.0.1:8000` in a browser for the built-in question/answer
+page — no separate frontend build needed.
+
+## Run as a desktop app
+
+The same UI also runs in a native window instead of a browser tab:
+
+```powershell
+python -m src.desktop_app
+```
+
+This starts the API server in the background and opens it in an OS window
+via `pywebview` — no browser, no internet, just a local window.

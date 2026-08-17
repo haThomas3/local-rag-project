@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local RAG</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a21;
+    --border: #262b34;
+    --text: #e7e9ee;
+    --muted: #9aa3b2;
+    --accent: #5b8def;
+    --very-high: #3ecf8e;
+    --high: #7bd88f;
+    --medium: #e0c34d;
+    --low: #e0954d;
+    --very-low: #e05b5b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 24px;
+  }
+  .ask-box {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  input[type="text"] {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  input[type="text"]:focus { outline: 2px solid var(--accent); }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 20px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .options {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  select {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  #status { font-size: 13px; color: var(--muted); margin-bottom: 16px; min-height: 18px; }
+  .answer-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  .answer-meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .insufficient { color: var(--low); }
+  .source {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .source-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .source-file { font-weight: 600; }
+  .source-loc { color: var(--muted); }
+  .relevance {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .relevance.VERY_HIGH { background: rgba(62,207,142,0.15); color: var(--very-high); }
+  .relevance.HIGH { background: rgba(123,216,143,0.15); color: var(--high); }
+  .relevance.MEDIUM { background: rgba(224,195,77,0.15); color: var(--medium); }
+  .relevance.LOW { background: rgba(224,149,77,0.15); color: var(--low); }
+  .relevance.VERY_LOW { background: rgba(224,91,91,0.15); color: var(--very-low); }
+  .quote { color: var(--muted); font-style: italic; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Local RAG</h1>
+  <p class="subtitle">Ask a question about your indexed documents. Runs entirely on this machine.</p>
+
+  <div class="ask-box">
+    <input type="text" id="question" placeholder="Ask a question..." autofocus>
+    <button id="ask-btn">Ask</button>
+  </div>
+
+  <div class="options">
+    <label><input type="checkbox" id="generate-answer"> Generate answer</label>
+    <label>Provider
+      <select id="provider">
+        <option value="none">none (free)</option>
+        <option value="gemini">gemini (paid, opt-in)</option>
+        <option value="local">local (Ollama)</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="allow-remote"> Allow remote LLM</label>
+  </div>
+
+  <div id="status"></div>
+  <div id="results"></div>
+
+  <footer id="footer"></footer>
+</main>
+
+<script>
+const els = {
+  question: document.getElementById('question'),
+  askBtn: document.getElementById('ask-btn'),
+  generateAnswer: document.getElementById('generate-answer'),
+  provider: document.getElementById('provider'),
+  allowRemote: document.getElementById('allow-remote'),
+  status: document.getElementById('status'),
+  results: document.getElementById('results'),
+  footer: document.getElementById('footer'),
+};
+
+function relevanceClass(label) {
+  return label.replace(/\s+/g, '_');
+}
+
+function renderSources(sources) {
+  if (!sources.length) return '';
+  return sources.map(s => `
+    <div class="source">
+      <div class="source-top">
+        <span class="source-file">${escapeHtml(s.source)}</span>
+        <span class="relevance ${relevanceClass(s.relevance)}">${escapeHtml(s.relevance)}</span>
+      </div>
+      <div class="source-loc">${escapeHtml(s.location)} &middot; score ${s.score.toFixed(3)}</div>
+      <div class="quote">"${escapeHtml(s.quote)}"</div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function ask() {
+  const question = els.question.value.trim();
+  if (!question) return;
+
+  els.askBtn.disabled = true;
+  els.status.textContent = 'Retrieving...';
+  els.results.innerHTML = '';
+
+  try {
+    const response = await fetch('/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question,
+        generate_answer: els.generateAnswer.checked,
+        llm_provider: els.provider.value,
+        allow_remote_llm: els.allowRemote.checked,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      els.status.textContent = '';
+      els.results.innerHTML = `<div class="answer-card insufficient">Error ${response.status}: ${escapeHtml(err.detail || response.statusText)}</div>`;
+      return;
+    }
+
+    const data = await response.json();
+    els.status.textContent = '';
+
+    let html = '';
+
+    if (data.answer) {
+      html += `
+        <div class="answer-card">
+          <div class="answer-meta">provider: ${escapeHtml(data.answer.provider)} &middot; status: ${escapeHtml(data.answer.status)} &middot; remote call: ${data.answer.used_remote_api}</div>
+          ${escapeHtml(data.answer.answer)}
+        </div>
+      `;
+    } else if (data.insufficient_context) {
+      html += `<div class="answer-card insufficient">No sufficiently relevant sources were retrieved.</div>`;
+    }
+
+    html += renderSources(data.sources);
+    els.results.innerHTML = html;
+  } catch (e) {
+    els.status.textContent = '';
+    els.results.innerHTML = `<div class="answer-card insufficient">Request failed: ${escapeHtml(String(e))}. Is the server running?</div>`;
+  } finally {
+    els.askBtn.disabled = false;
+  }
+}
+
+els.askBtn.addEventListener('click', ask);
+els.question.addEventListener('keydown', (e) => { if (e.key === 'Enter') ask(); });
+
+fetch('/health').then(r => r.json()).then(d => {
+  els.footer.textContent = d.index_loaded
+    ? `Index loaded: ${d.indexed_chunks} chunks.`
+    : 'No index loaded. Run: python -m src.index_documents';
+}).catch(() => { els.footer.textContent = 'Could not reach server.'; });
+</script>
+</body>
+</html>
