@@ -1,9 +1,18 @@
+import shutil
 import unittest
+from pathlib import Path
 
 import numpy as np
 from fastapi.testclient import TestClient
 
-from src.api import app, get_retriever
+from src.api import (
+    app,
+    get_documents_dir,
+    get_embedding_model,
+    get_retriever,
+    get_vector_store_dir,
+    state,
+)
 from src.metadata import ChunkMetadata, TextChunk
 from src.retriever import LocalRetriever
 from src.vector_store import FaissVectorStore
@@ -15,6 +24,9 @@ class _StubEmbeddingModel:
             return np.array([1.0, 0.0], dtype="float32")
 
         return np.array([0.0, 1.0], dtype="float32")
+
+    def embed_texts(self, texts: list[str]) -> np.ndarray:
+        return np.array([self.embed_query(text) for text in texts], dtype="float32")
 
 
 def _build_test_retriever() -> LocalRetriever:
@@ -110,6 +122,59 @@ class ApiTests(unittest.TestCase):
         response = self.client.get("/documents")
 
         self.assertEqual(response.status_code, 503)
+
+
+class UploadTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.documents_dir = Path("tests") / "_temp_upload_docs"
+        self.store_dir = Path("tests") / "_temp_upload_store"
+        shutil.rmtree(self.documents_dir, ignore_errors=True)
+        shutil.rmtree(self.store_dir, ignore_errors=True)
+
+        app.dependency_overrides[get_documents_dir] = lambda: self.documents_dir
+        app.dependency_overrides[get_vector_store_dir] = lambda: self.store_dir
+        app.dependency_overrides[get_embedding_model] = _StubEmbeddingModel
+        self.client = TestClient(app)
+
+    def tearDown(self) -> None:
+        app.dependency_overrides.clear()
+        state.retriever = None
+        state.chunk_count = 0
+        shutil.rmtree(self.documents_dir, ignore_errors=True)
+        shutil.rmtree(self.store_dir, ignore_errors=True)
+
+    def test_upload_indexes_document_and_it_becomes_askable(self) -> None:
+        content = b"A new wizard fact: Neville Longbottom's toad is named Trevor."
+
+        upload_response = self.client.post(
+            "/documents/upload",
+            files={"file": ("neville.txt", content, "text/plain")},
+        )
+
+        self.assertEqual(upload_response.status_code, 200)
+        body = upload_response.json()
+        self.assertEqual(body["total_chunks"], 1)
+        self.assertEqual(body["documents"][0]["source"], "neville.txt")
+        self.assertTrue((self.documents_dir / "neville.txt").exists())
+        self.assertTrue((self.store_dir / "index.faiss").exists())
+
+        ask_response = self.client.post(
+            "/ask", json={"question": "Who owns a wizard toad?"}
+        )
+
+        self.assertEqual(ask_response.status_code, 200)
+        ask_body = ask_response.json()
+        self.assertFalse(ask_body["insufficient_context"])
+        self.assertIn("Trevor", ask_body["sources"][0]["quote"])
+
+    def test_upload_rejects_unsupported_file_type(self) -> None:
+        response = self.client.post(
+            "/documents/upload",
+            files={"file": ("virus.exe", b"binary", "application/octet-stream")},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse((self.documents_dir / "virus.exe").exists())
 
 
 if __name__ == "__main__":

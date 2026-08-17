@@ -452,27 +452,50 @@ Done means:
 
 ## Milestone 12 — File Upload UI
 
-Status: Planned
+Status: Complete, basic version
 
 Goal: Add a user-friendly file upload flow.
 
-Planned work:
+Completed work:
 
-- Add PDF upload.
-- Add `.txt` upload.
-- Add `.md` upload.
-- Add drag-and-drop support if practical.
-- Add an `Index documents` action.
-- Show which files were uploaded and indexed.
-- Allow asking questions about uploaded files.
+- Added `POST /documents/upload` to `src/api.py`. Accepts one file
+  (`.txt`, `.md`, `.pdf`), rejects anything else with a clear 400 error.
+- Saved file goes into `data/sample_documents`, then the full document
+  set is re-indexed (chosen over incremental indexing for simplicity —
+  reuses the same chunking/embedding path as `index_documents.py`,
+  reasoning trusted since Milestone 8/9). The already-loaded embedding
+  model is reused instead of reloading it, consistent with the
+  persistent-runtime pattern from Milestone 6.
+- Upload UI added to `src/static/index.html`: a drag-and-drop zone that's
+  also click-to-browse, upload status message, and a live chip list of
+  indexed documents with per-file chunk counts.
+- Endpoints made independently testable via dependency injection
+  (`get_documents_dir`, `get_vector_store_dir`, `get_embedding_model`),
+  matching the existing `get_retriever` pattern — tests never touch the
+  real `data/sample_documents` or load the real embedding model.
+- Added `python-multipart` (required by FastAPI for file uploads).
+- Verified live in Chrome: uploaded a real `.txt` file via the file
+  input, confirmed it appeared in the document chip list with the
+  correct chunk count, confirmed the index total updated, then asked a
+  question specific to the uploaded content and got it back as the top
+  (HIGH relevance) source. Test artifact was removed afterward and the
+  real index rebuilt back to its original 3 documents / 9 chunks.
+
+Not yet done:
+
+- No delete/remove-document action (not in original scope; would need
+  its own milestone work if wanted later).
+- Drag-and-drop was implemented but only click-to-browse was verified
+  through actual OS-level automation (drag-and-drop was verified by
+  code review of the same upload code path, not a simulated OS drag).
 
 This is the milestone where the project starts to feel closer to a local NotebookLM-style application.
 
 Done means:
 
-- The user can upload files through the interface.
-- The system indexes them.
-- The user can ask questions about those files.
+- The user can upload files through the interface. — Achieved.
+- The system indexes them. — Achieved.
+- The user can ask questions about those files. — Achieved, verified live.
 
 ---
 
@@ -551,7 +574,7 @@ Done means:
 3. ~~Milestone 10 — FastAPI Backend~~ Done, basic version.
 4. ~~Milestone 11 — Basic User Interface~~ Done, basic version (web
    page + desktop window wrapper).
-5. Milestone 12 — File Upload UI
+5. ~~Milestone 12 — File Upload UI~~ Done, basic version.
 6. Milestone 13 — Cost Control and Provider Safety
 7. Milestone 14 — Docker and Deployment Preparation
 8. Milestone 15 — Portfolio Polish

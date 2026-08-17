@@ -4,11 +4,15 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from src.config import VECTOR_STORE_DIR
+from src.chunker import chunk_documents
+from src.config import SAMPLE_DOCUMENTS_DIR, VECTOR_STORE_DIR
+from src.document_loader import SUPPORTED_EXTENSIONS, load_documents_from_dir
+from src.embedding_model import LocalEmbeddingModel
+from src.index_documents import CHUNK_SIZE_WORDS, OVERLAP_WORDS
 from src.llm_provider import generate_answer_from_prompt, normalize_provider
 from src.prompt_builder import (
     build_debug_report,
@@ -65,6 +69,21 @@ def get_retriever() -> LocalRetriever:
         )
 
     return state.retriever
+
+
+def get_documents_dir() -> Path:
+    return SAMPLE_DOCUMENTS_DIR
+
+
+def get_vector_store_dir() -> Path:
+    return VECTOR_STORE_DIR
+
+
+def get_embedding_model() -> LocalEmbeddingModel:
+    if state.retriever is not None:
+        return state.retriever.embedding_model
+
+    return LocalEmbeddingModel()
 
 
 class AskRequest(BaseModel):
@@ -154,6 +173,53 @@ def documents(retriever: LocalRetriever = Depends(get_retriever)) -> DocumentsRe
         ],
         total_chunks=sum(counts.values()),
     )
+
+
+@app.post("/documents/upload", response_model=DocumentsResponse)
+async def upload_document(
+    file: UploadFile = File(...),
+    documents_dir: Path = Depends(get_documents_dir),
+    vector_store_dir: Path = Depends(get_vector_store_dir),
+    embedding_model: LocalEmbeddingModel = Depends(get_embedding_model),
+) -> DocumentsResponse:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided.")
+
+    suffix = Path(file.filename).suffix.lower()
+
+    if suffix not in SUPPORTED_EXTENSIONS:
+        supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: '{suffix or file.filename}'. Supported: {supported}",
+        )
+
+    safe_name = Path(file.filename).name
+    documents_dir.mkdir(parents=True, exist_ok=True)
+    contents = await file.read()
+    (documents_dir / safe_name).write_bytes(contents)
+
+    loaded_documents = load_documents_from_dir(documents_dir)
+    chunks = chunk_documents(
+        loaded_documents,
+        chunk_size_words=CHUNK_SIZE_WORDS,
+        overlap_words=OVERLAP_WORDS,
+    )
+
+    if not chunks:
+        raise HTTPException(
+            status_code=422,
+            detail=f"'{safe_name}' was saved but produced no usable text to index.",
+        )
+
+    new_retriever = LocalRetriever(embedding_model=embedding_model)
+    new_retriever.index_chunks(chunks)
+    new_retriever.vector_store.save(vector_store_dir)
+
+    state.retriever = new_retriever
+    state.chunk_count = len(chunks)
+
+    return documents(new_retriever)
 
 
 @app.post("/ask", response_model=AskResponse)
