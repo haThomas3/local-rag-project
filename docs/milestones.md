@@ -355,24 +355,52 @@ Done means:
 
 ## Milestone 10 — FastAPI Backend
 
-Status: Planned
+Status: Complete, basic version
 
 Goal: Turn the local RAG logic into a backend service.
 
-Planned work:
+Completed work:
 
-- Add FastAPI.
-- Add an endpoint for asking questions.
-- Add an endpoint for debug output.
-- Add an endpoint for listing indexed documents.
-- Later add upload/index endpoints.
-- Keep the model and vector store loaded in memory while the server runs.
+- Added `src/api.py` with a FastAPI app.
+- `GET /health` — reports whether the vector store is loaded and how many
+  chunks are indexed. Always responds even if the index isn't loaded yet.
+- `GET /documents` — lists indexed source files and their chunk counts.
+- `POST /ask` — retrieval + grounded prompt, with optional fields to
+  generate a real answer (`generate_answer`, `llm_provider`,
+  `allow_remote_llm`), and optional debug/raw-prompt output (`debug`,
+  `show_prompt`), matching what the CLI already supports. Responses are
+  structured JSON (source, location, relevance label, score, quote) rather
+  than the CLI's printed text reports, so a future frontend can consume
+  them directly.
+- Vector store and embedding model are loaded once at startup via a
+  FastAPI lifespan handler, not per-request — same reasoning as the CLI's
+  persistent runtime (Milestone 6).
+- If no index exists yet, the server still starts; `/ask` and
+  `/documents` return `503` with a clear message instead of crashing.
+- Verified live: started the server with `uvicorn`, and hit `/health`,
+  `/documents`, and `/ask` over real HTTP against the actual indexed
+  Harry Potter/sample documents — correct sources, correct relevance
+  labels, correct citations.
+- Added `tests/test_api.py` (7 tests) using FastAPI's `TestClient` with an
+  injected in-memory retriever (via `Depends`/`dependency_overrides`), so
+  API tests don't depend on the real `data/vector_store` being present or
+  make any network/LLM calls.
+
+Not yet done:
+
+- Upload/index endpoints (planned for Milestone 12, alongside the file
+  upload UI).
+- No debug-output-only endpoint; `debug`/`show_prompt` are fields on the
+  `/ask` request instead of separate endpoints, since they always need
+  the same retrieval to already have happened.
 
 Done means:
 
-- A local server can receive questions.
-- The backend can return answers, sources, and optional debug information.
-- PowerShell is no longer the main user interaction layer.
+- A local server can receive questions. — Achieved.
+- The backend can return answers, sources, and optional debug
+  information. — Achieved.
+- PowerShell is no longer the main user interaction layer. — Achieved for
+  API access; a browser-based UI is still Milestone 11.
 
 ---
 
@@ -493,14 +521,19 @@ Done means:
 
 ## Recommended Development Order From Here
 
-1. Milestone 8 — Document Indexing Workflow
-2. Milestone 7B — Real LLM Provider Implementation
-4. Milestone 10 — FastAPI Backend
-5. Milestone 11 — Basic User Interface
-6. Milestone 12 — File Upload UI
-7. Milestone 13 — Cost Control and Provider Safety
-8. Milestone 14 — Docker and Deployment Preparation
-9. Milestone 15 — Portfolio Polish
+1. ~~Milestone 8 — Document Indexing Workflow~~ Done.
+2. ~~Milestone 7B — Real LLM Provider Implementation~~ Done for
+   Gemini and Ollama; OpenAI still a stub, not currently prioritized.
+3. ~~Milestone 10 — FastAPI Backend~~ Done, basic version.
+4. Milestone 11 — Basic User Interface
+5. Milestone 12 — File Upload UI
+6. Milestone 13 — Cost Control and Provider Safety
+7. Milestone 14 — Docker and Deployment Preparation
+8. Milestone 15 — Portfolio Polish
+
+Ollama is intentionally on hold until local disk/RAM allows a model to be
+pulled; work in the meantime should prefer items that don't depend on it
+(as Milestones 10-12 mostly don't).
 
 ---
 

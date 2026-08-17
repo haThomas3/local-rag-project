@@ -96,3 +96,23 @@ python -m src.rag_cli --generate-answer --llm-provider local
 Generated FAISS files are stored in `data/vector_store` and are ignored by Git.
 
 Document indexing uses local embeddings and does not call Gemini, OpenAI, or another remote LLM provider.
+
+## Run the local API server
+
+The same RAG logic is also available over HTTP, so a future frontend (or
+just `curl`/Postman) can talk to it instead of PowerShell:
+
+```powershell
+python -m uvicorn src.api:app --port 8000
+```
+
+- `GET /health` — whether the index is loaded and how many chunks it has.
+- `GET /documents` — indexed source files and chunk counts.
+- `POST /ask` — `{"question": "...", "generate_answer": false}` for
+  retrieval only (free), or add `"generate_answer": true` with
+  `"llm_provider"` and `"allow_remote_llm"` to also generate a real answer,
+  matching the CLI's flags.
+
+The server loads the vector store once at startup, same as the CLI. If no
+index exists yet, it still starts, and `/ask`/`/documents` return `503`
+until you run `python -m src.index_documents`.
