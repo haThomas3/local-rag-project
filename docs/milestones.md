@@ -218,7 +218,7 @@ Done means:
 
 ## Milestone 7 — LLM Provider Integration
 
-Status: In progress - safe provider scaffold complete; real provider implementation postponed
+Status: In progress - Gemini generation implemented and verified live; local/Ollama provider implemented in code, pending a locally downloaded model; OpenAI still a stub
 
 Goal: Connect the RAG prompt to an actual LLM provider.
 
@@ -232,31 +232,36 @@ Current checkpoint:
   - CLI supports explicit remote opt-in using --allow-remote-llm.
   - Gemini/OpenAI/Ollama are not default dependencies for normal use.
 
-- 7B — Still open:
-  - Implement real Gemini provider for controlled development testing.
-  - Later implement local provider through Ollama or LM Studio.
-  - Keep OpenAI as an optional paid fallback only.
-  - Verify that generated answers use only retrieved sources.
-  - Test refusal behavior when the answer is not present in retrieved context.
+- 7B — In progress:
+  - Real Gemini provider implemented using the `google-genai` SDK (the
+    previous `google-generativeai` package is deprecated by Google and was
+    replaced). Verified live end-to-end: retrieval, grounded prompt, and a
+    real Gemini answer with correct source citations.
+  - Real local provider implemented against the Ollama HTTP API
+    (`OLLAMA_BASE_URL`, default `http://localhost:11434`) using only the
+    Python standard library, so no extra dependency is required. Fails
+    gracefully with a clear message (`ollama_unavailable`) when Ollama is
+    not running or no model has been pulled yet. Not yet verified against a
+    real running model because no local Ollama model has been downloaded
+    yet due to local disk/RAM constraints. This is the intended default
+    provider once a model is available, so the RAG assistant can run fully
+    offline with no per-call cost.
+  - OpenAI provider is still a stub (`not_implemented`). Not prioritized
+    since Gemini (dev/testing) and Ollama (offline default) already cover
+    the project's needs.
+  - Verified that generated answers use only retrieved sources (Gemini
+    live test returned citations matching the retrieved chunks).
+  - LLM refusal test not needed as a separate case: the retrieval
+    relevance gate already blocks the LLM call entirely when context is
+    insufficient (see Milestone 5 and Milestone 9), so no provider ever
+    sees a question it can't ground an answer to.
 
-Reason for postponing 7B:
+Cost-control note:
 
-- The local indexing workflow should be stabilized first.
-- The project should not become dependent on Gemini before the local RAG pipeline is reliable.
-- Gemini will be used later as a development helper, not as the project default.
-
-
-Planned work:
-
-- Add OpenAI provider support.
-- Add Gemini provider support.
-- Support provider selection through configuration.
-- Optionally support comparison mode:
-  - OpenAI answer
-  - Gemini answer
-  - same retrieved sources
-- Keep all API keys in `.env`.
-- Avoid sending questions to an LLM when retrieval confidence is too weak.
+- `ALLOW_PAID_API_CALLS` stays `false` in `.env` by default. Real Gemini
+  calls only happen when explicitly opted into per run with
+  `--allow-remote-llm`, so the key sitting in `.env` cannot be used
+  accidentally.
 
 Done means:
 
@@ -264,6 +269,9 @@ Done means:
 - The system builds a grounded prompt.
 - The selected LLM generates an answer.
 - The answer includes source references.
+- [x] Achieved for Gemini (opt-in, remote).
+- [ ] Not yet achieved for local/Ollama (code ready, no model pulled yet).
+- [ ] Not yet achieved for OpenAI (stub only).
 
 ---
 
@@ -314,11 +322,19 @@ Completed local evaluation coverage:
 - Low-relevance context returns insufficient-context behavior.
 - RAG prompts filter out unreliable retrieved context.
 - Provider none is verified to avoid remote API usage.
+- Local/Ollama provider is verified to fail gracefully (no crash, no
+  remote fallback) when Ollama is not running.
 
-Deferred to Milestone 7B:
+Still deferred:
 
-- Real Gemini/Ollama/OpenAI answer-generation tests.
-- LLM refusal tests using a real remote or local model.
+- Automated Gemini answer-generation test. Verified manually/live once
+  (see Milestone 7B), but not added to the automated suite on purpose —
+  running it automatically would call a paid API on every test run,
+  which conflicts with the project's low-cost goal.
+- Automated local/Ollama answer-generation test against a real running
+  model. Blocked until a model is actually pulled locally.
+- OpenAI answer-generation tests (blocked on OpenAI provider
+  implementation, not currently prioritized).
 
 Planned work:
 

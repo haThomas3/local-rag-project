@@ -53,6 +53,16 @@ ALLOW_PAID_API_CALLS = _get_bool_env("ALLOW_PAID_API_CALLS", default=False)
 OPENAI_API_KEY_SET = _has_real_value(os.getenv("OPENAI_API_KEY"))
 GEMINI_API_KEY_SET = _has_real_value(os.getenv("GEMINI_API_KEY"))
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") if OPENAI_API_KEY_SET else None
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") if GEMINI_API_KEY_SET else None
+
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
+
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip().rstrip("/")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1").strip()
+OLLAMA_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "60"))
+
 
 def print_config_summary() -> None:
     print("Project root:", PROJECT_ROOT)

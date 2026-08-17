@@ -82,6 +82,16 @@ class RagBehaviorTests(unittest.TestCase):
         self.assertEqual(result.status, "disabled")
         self.assertFalse(result.used_remote_api)
 
+    def test_local_provider_fails_gracefully_without_ollama_running(self) -> None:
+        result = generate_answer_from_prompt(
+            "Answer using only retrieved context.",
+            provider="local",
+        )
+
+        self.assertEqual(result.provider, "local")
+        self.assertEqual(result.status, "ollama_unavailable")
+        self.assertFalse(result.used_remote_api)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,15 +24,26 @@ Future versions may include server deployment, user accounts, a web interface, c
 
 ## LLM Providers
 
-The system is planned to support configurable LLM providers.
+The system supports configurable LLM providers, selected with `LLM_PROVIDER`
+in `.env` or with `--llm-provider` per run.
 
-Possible providers:
+- `none` (default) — no generation, retrieval and grounded prompt only.
+- `gemini` — real, working. Remote and paid, so it is blocked unless you
+  explicitly pass `--allow-remote-llm` for that run, even if
+  `GEMINI_API_KEY` is set in `.env`.
+- `local` — real, working, talks to a locally running
+  [Ollama](https://ollama.com) server (`OLLAMA_BASE_URL`, default
+  `http://localhost:11434`). This is the intended default for normal use:
+  free, fully offline, no API key needed. Requires `ollama serve` running
+  and a model pulled (`ollama pull <model>`, matching `OLLAMA_MODEL` in
+  `.env`, default `llama3.1`). If Ollama isn't running or no model has
+  been pulled, it fails with a clear message instead of crashing.
+- `openai` — not implemented yet, returns a stub response.
 
-- OpenAI
-- Gemini
-- A future comparison mode that can return answers from more than one provider
+A future comparison mode may return answers from more than one provider
+side by side.
 
-API keys must be stored locally in a .env file.
+API keys must be stored locally in a `.env` file, never committed.
 
 ## Security
 
@@ -63,10 +74,23 @@ Build or rebuild the local index:
 python -m src.index_documents
 ```
 
-Query the saved local index:
+Query the saved local index (retrieval and grounded prompt only, no LLM call):
 
 ```powershell
 python -m src.rag_cli
+```
+
+Query and generate a real answer with Gemini for one run only:
+
+```powershell
+python -m src.rag_cli --generate-answer --llm-provider gemini --allow-remote-llm
+```
+
+Query and generate a real answer fully offline with a local Ollama model
+(requires `ollama serve` running and a model pulled):
+
+```powershell
+python -m src.rag_cli --generate-answer --llm-provider local
 ```
 
 Generated FAISS files are stored in `data/vector_store` and are ignored by Git.

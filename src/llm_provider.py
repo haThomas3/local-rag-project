@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import json
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 
 from src.config import (
     ALLOW_PAID_API_CALLS,
+    GEMINI_API_KEY,
     GEMINI_API_KEY_SET,
+    GEMINI_MODEL,
     LLM_PROVIDER,
+    OLLAMA_BASE_URL,
+    OLLAMA_MODEL,
+    OLLAMA_TIMEOUT_SECONDS,
     OPENAI_API_KEY_SET,
 )
 
@@ -61,13 +69,54 @@ def generate_answer_from_prompt(
         )
 
     if selected_provider == "local":
+        request_body = json.dumps(
+            {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+        ).encode("utf-8")
+        request = urllib.request.Request(
+            f"{OLLAMA_BASE_URL}/api/generate",
+            data=request_body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(
+                request, timeout=OLLAMA_TIMEOUT_SECONDS
+            ) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except urllib.error.URLError:
+            return LLMGenerationResult(
+                provider=selected_provider,
+                answer=(
+                    f"Local Ollama server is not reachable at {OLLAMA_BASE_URL}. "
+                    "Start it with `ollama serve` and make sure the model "
+                    f"'{OLLAMA_MODEL}' is pulled with `ollama pull {OLLAMA_MODEL}`."
+                ),
+                status="ollama_unavailable",
+                used_remote_api=False,
+            )
+        except Exception as exc:  # malformed response, bad model name, etc.
+            return LLMGenerationResult(
+                provider=selected_provider,
+                answer=f"Local Ollama request failed: {exc}",
+                status="error",
+                used_remote_api=False,
+            )
+
+        answer_text = (payload.get("response") or "").strip()
+
+        if not answer_text:
+            return LLMGenerationResult(
+                provider=selected_provider,
+                answer="Ollama returned an empty response.",
+                status="empty_response",
+                used_remote_api=False,
+            )
+
         return LLMGenerationResult(
             provider=selected_provider,
-            answer=(
-                "Local LLM generation is not connected yet. This mode is reserved "
-                "for a future local provider such as LM Studio or Ollama."
-            ),
-            status="not_implemented",
+            answer=answer_text,
+            status="ok",
             used_remote_api=False,
         )
 
@@ -91,11 +140,35 @@ def generate_answer_from_prompt(
                 used_remote_api=False,
             )
 
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model=GEMINI_MODEL, contents=prompt
+            )
+            answer_text = (response.text or "").strip()
+        except Exception as exc:
+            return LLMGenerationResult(
+                provider=selected_provider,
+                answer=f"Gemini request failed: {exc}",
+                status="error",
+                used_remote_api=True,
+            )
+
+        if not answer_text:
+            return LLMGenerationResult(
+                provider=selected_provider,
+                answer="Gemini returned an empty response.",
+                status="empty_response",
+                used_remote_api=True,
+            )
+
         return LLMGenerationResult(
             provider=selected_provider,
-            answer="Gemini provider is configured but API calling is not implemented yet.",
-            status="not_implemented",
-            used_remote_api=False,
+            answer=answer_text,
+            status="ok",
+            used_remote_api=True,
         )
 
     if selected_provider == "openai":
